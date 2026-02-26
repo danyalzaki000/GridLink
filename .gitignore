@@ -27,6 +27,4 @@ __pycache__/
 .env
 venv/
 
-# Antigravity / Gemini
-.gemini/
-.agents/
+.vscode/
