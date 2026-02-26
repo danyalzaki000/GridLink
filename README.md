@@ -1,6 +1,6 @@
 # 🌐 GridLink Node
 
-**Share your bandwidth. Earn Devnet USDC. Run a real DePIN node from your pocket.**
+**Share your bandwidth. Earn USDC. Run a real DePIN node from your pocket.**
 
 GridLink is a decentralized physical infrastructure network (DePIN) that turns Android devices into bandwidth-sharing nodes. Earn micropayments for every megabyte you route, settled on-chain via Solana Devnet.
 
@@ -166,4 +166,5 @@ monolith/
 
 ## 📄 License
 
+# MIT Licnse
 Built by **Danyal** — GridLink DePIN, Monolith 2026.
