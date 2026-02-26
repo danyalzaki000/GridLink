@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.GridLink" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#102222</item>
+        <item name="android:navigationBarColor">#162a2a</item>
+        <item name="android:windowBackground">#102222</item>
+    </style>
+</resources>
