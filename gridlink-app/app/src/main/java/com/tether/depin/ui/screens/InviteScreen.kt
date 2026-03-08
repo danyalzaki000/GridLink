@@ -70,7 +70,7 @@ fun InviteScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val referralCode = "TETHER-NODE-88X"
     val qrContent = "https://limewire.com/d/gz3V1#bcmTeZUzIw"
-    val shareText = "Turn your phone into a DePIN proxy node. Join my GridLink grid to earn USDC: https://gridlink.network/invite/88X"
+    val shareText = "Turn your phone into a DePIN proxy node. Join my GridLink grid to earn SOL: https://gridlink.network/invite/88X"
 
     val qrBitmap = remember { generateQrBitmap(qrContent).asImageBitmap() }
 
@@ -197,7 +197,7 @@ fun InviteScreen(onBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text("Your referral earns passive USDC for every GB your peer shares",
+                Text("Your referral earns passive SOL for every GB your peer shares",
                     style = MaterialTheme.typography.bodySmall, color = SlateGray500,
                     textAlign = TextAlign.Center, fontSize = 12.sp)
             }
@@ -217,7 +217,7 @@ private fun shareInvite(context: Context, text: String) {
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
-        putExtra(Intent.EXTRA_SUBJECT, "Join GridLink — Earn USDC by sharing bandwidth")
+        putExtra(Intent.EXTRA_SUBJECT, "Join GridLink — Earn SOL by sharing bandwidth")
     }
     context.startActivity(Intent.createChooser(intent, "Share via"))
 }

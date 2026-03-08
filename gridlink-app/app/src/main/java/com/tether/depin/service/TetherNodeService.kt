@@ -131,7 +131,7 @@ class TetherNodeService : Service() {
 
         return NotificationCompat.Builder(this, TetherApplication.CHANNEL_ID)
             .setContentTitle("GridLink Node is Active")
-            .setContentText("Routing Traffic • Earning USDC")
+            .setContentText("Routing Traffic • Earning SOL")
             .setSmallIcon(android.R.drawable.ic_menu_share)
             .setOngoing(true)
             .setContentIntent(openAppIntent)

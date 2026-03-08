@@ -37,7 +37,11 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     val liveSolBalance: StateFlow<Double?> = _liveSolBalance.asStateFlow()
 
     init {
-        try { WalletConnectionManager.initialize(application) } catch (e: Exception) {
+        try {
+            WalletConnectionManager.initialize(application)
+            // Auto-fetch real balance on startup
+            refreshBalance()
+        } catch (e: Exception) {
             Log.e("WalletVM", "init failed: ${e.message}", e)
         }
     }
@@ -51,6 +55,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
 
+        Log.d("WalletVM", "Requesting airdrop for: $pubKey")
         _airdropState.value = AirdropState.Loading
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -59,16 +64,25 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                     if (result.isSuccess) {
                         _airdropState.value = AirdropState.Success(result.getOrThrow())
                     } else {
-                        _airdropState.value = AirdropState.Error(
-                            result.exceptionOrNull()?.localizedMessage ?: "Airdrop failed"
-                        )
+                        // SHOW THE REAL ERROR — no masking
+                        val realError = result.exceptionOrNull()?.message ?: "Airdrop failed (unknown)"
+                        Log.e("WalletVM", "Airdrop failed: $realError")
+                        _airdropState.value = AirdropState.Error("Airdrop: $realError")
                     }
                 }
-                kotlinx.coroutines.delay(3000)
-                refreshBalance()
+                // Poll balance multiple times for reactive UI
+                if (result.isSuccess) {
+                    for (i in 1..3) {
+                        kotlinx.coroutines.delay(2000)
+                        refreshBalance()
+                    }
+                }
             } catch (e: Exception) {
+                Log.e("WalletVM", "Airdrop exception: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    _airdropState.value = AirdropState.Error(e.localizedMessage ?: "Airdrop failed")
+                    _airdropState.value = AirdropState.Error(
+                        "Airdrop: ${e.message ?: "Connection error"}"
+                    )
                 }
             }
         }
@@ -83,9 +97,17 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val result = SolanaRpcClient.getBalance(pubKey)
                 if (result.isSuccess) {
-                    withContext(Dispatchers.Main) { _liveSolBalance.value = result.getOrThrow() }
+                    val bal = result.getOrThrow()
+                    Log.d("WalletVM", "Balance refreshed: $bal SOL")
+                    withContext(Dispatchers.Main) {
+                        _liveSolBalance.value = bal
+                        // Also sync into walletState so both sources agree
+                        WalletConnectionManager.updateBalance(bal)
+                    }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                Log.e("WalletVM", "Balance refresh failed: ${e.message}")
+            }
         }
     }
 
@@ -98,26 +120,31 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val blockhashResult = SolanaRpcClient.getRecentBlockhash()
-                if (blockhashResult.isFailure) {
-                    withContext(Dispatchers.Main) {
-                        _settlementResult.value = SettlementResult(
-                            false, error = "Blockhash fetch failed: ${blockhashResult.exceptionOrNull()?.localizedMessage}"
-                        )
-                    }
-                    return@launch
-                }
-
-                val txSig = "5Tz${System.currentTimeMillis()}${pubKey.take(8)}devnet"
-                kotlinx.coroutines.delay(2000)
+                // Real on-chain SOL transfer (self-transfer as proof-of-transaction)
+                val result = WalletConnectionManager.signAndSendSolTransfer(
+                    amountSol = 0.001,
+                    recipientBase58 = pubKey
+                )
 
                 withContext(Dispatchers.Main) {
-                    _settlementResult.value = SettlementResult(
-                        success = true,
-                        txSignature = txSig,
-                        explorerUrl = "https://explorer.solana.com/tx/$txSig?cluster=devnet"
-                    )
+                    if (result.isSuccess) {
+                        val txSig = result.getOrThrow()
+                        _settlementResult.value = SettlementResult(
+                            success = true,
+                            txSignature = txSig,
+                            explorerUrl = "https://explorer.solana.com/tx/$txSig?cluster=devnet"
+                        )
+                    } else {
+                        _settlementResult.value = SettlementResult(
+                            false,
+                            error = result.exceptionOrNull()?.localizedMessage ?: "Transaction failed"
+                        )
+                    }
                 }
+
+                // Refresh balance after tx confirms
+                kotlinx.coroutines.delay(3000)
+                refreshBalance()
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     _settlementResult.value = SettlementResult(false, error = e.localizedMessage ?: "TX failed")

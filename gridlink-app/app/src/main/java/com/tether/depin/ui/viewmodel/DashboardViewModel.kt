@@ -36,13 +36,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             repository.initializeStats()
         }
-        // Uptime counter
+        // Poll service state + uptime counter every second
         viewModelScope.launch {
             while (true) {
-                delay(1000)
+                // Sync with actual service state
+                val serviceRunning = TetherNodeService.isRunning
+                if (_isProxyRunning.value != serviceRunning) {
+                    _isProxyRunning.value = serviceRunning
+                    if (!serviceRunning) _uptimeSeconds.value = 0
+                }
                 if (_isProxyRunning.value) {
                     _uptimeSeconds.value += 1
                 }
+                delay(1000)
             }
         }
     }

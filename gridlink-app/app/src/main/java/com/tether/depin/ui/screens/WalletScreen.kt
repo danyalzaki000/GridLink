@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +40,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
     val context = LocalContext.current
@@ -188,10 +193,10 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
                             Surface(shape = RoundedCornerShape(16.dp), color = Primary.copy(alpha = 0.08f),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Primary.copy(alpha = 0.15f))) {
                                 Column(modifier = Modifier.padding(20.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text("$${String.format("%.2f", walletState.balanceUsdc)}", style = MaterialTheme.typography.headlineMedium,
+                                    Text("${liveSolBalance?.let { "%.4f".format(it) } ?: "%.4f".format(walletState.balanceSol)} SOL", style = MaterialTheme.typography.headlineMedium,
                                         color = Primary, fontWeight = FontWeight.Bold)
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("USDC Available", style = MaterialTheme.typography.bodyMedium, color = SlateGray400)
+                                    Text("SOL Available", style = MaterialTheme.typography.bodyMedium, color = SlateGray400)
                                 }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
@@ -277,7 +282,7 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Default.Layers, contentDescription = null, tint = Primary)
-                    Text("Stake USDC", color = White, fontWeight = FontWeight.Bold)
+                    Text("Stake SOL", color = White, fontWeight = FontWeight.Bold)
                 }
             },
             text = {
@@ -285,15 +290,15 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
                     Surface(shape = RoundedCornerShape(16.dp), color = Primary.copy(alpha = 0.08f),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Primary.copy(alpha = 0.15f))) {
                         Column(modifier = Modifier.padding(20.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("100 USDC", style = MaterialTheme.typography.headlineMedium, color = Primary, fontWeight = FontWeight.Bold)
+                            Text("0.5 SOL", style = MaterialTheme.typography.headlineMedium, color = Primary, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("at 12% APY", style = MaterialTheme.typography.bodyLarge, color = EmeraldGreen, fontWeight = FontWeight.SemiBold)
+                            Text("at 8% APY", style = MaterialTheme.typography.bodyLarge, color = EmeraldGreen, fontWeight = FontWeight.SemiBold)
                         }
                     }
                     Divider(color = Primary.copy(alpha = 0.1f))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Estimated Earnings", style = MaterialTheme.typography.bodyMedium, color = SlateGray400)
-                        Text("+12 USDC/year", style = MaterialTheme.typography.bodyMedium, color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                        Text("+0.04 SOL/year", style = MaterialTheme.typography.bodyMedium, color = EmeraldGreen, fontWeight = FontWeight.Bold)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Lock Period", style = MaterialTheme.typography.bodyMedium, color = SlateGray400)
@@ -309,7 +314,7 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
                 Button(onClick = {
                     showStakeDialog = false
                     viewModel.executeWithdrawal() // triggers settlement dialog with explorer link
-                    Toast.makeText(context, "🎉 Staked 100 USDC at 12% APY on Devnet", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "🎉 Staked 0.5 SOL at 8% APY on Devnet", Toast.LENGTH_LONG).show()
                 }, colors = ButtonDefaults.buttonColors(containerColor = Primary, contentColor = BackgroundDark),
                     shape = RoundedCornerShape(50)) { Text("STAKE NOW", fontWeight = FontWeight.Bold) }
             },
@@ -322,14 +327,14 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
     // ===== VIEW ALL DIALOG =====
     if (showViewAllDialog) {
         val allLogs = listOf(
-            TransactionItem("Bandwidth Share", "Today, 10:42 AM", "+0.005 USDC", "Completed", true),
-            TransactionItem("AI Inference Relay", "Today, 9:15 AM", "+0.012 USDC", "Completed", true),
-            TransactionItem("Node Incentive Reward", "Yesterday, 11:20 PM", "+0.12 USDC", "Completed", true),
-            TransactionItem("Data Scraping Job", "Yesterday, 6:45 PM", "+0.008 USDC", "Completed", true),
-            TransactionItem("Secure Tunnel Relay", "Yesterday, 2:30 PM", "+0.003 USDC", "Completed", true),
-            TransactionItem("Withdrawal to Phantom", "Oct 24, 4:15 PM", "-15.00 USDC", "0.001 SOL fee", false),
-            TransactionItem("Relay Node Bonus", "Oct 23, 9:00 AM", "+0.08 USDC", "Completed", true),
-            TransactionItem("Bandwidth Share", "Oct 22, 3:10 PM", "+0.006 USDC", "Completed", true)
+            TransactionItem("Bandwidth Share", "Today, 10:42 AM", "+0.005 SOL", "Completed", true),
+            TransactionItem("AI Inference Relay", "Today, 9:15 AM", "+0.012 SOL", "Completed", true),
+            TransactionItem("Node Incentive Reward", "Yesterday, 11:20 PM", "+0.12 SOL", "Completed", true),
+            TransactionItem("Data Scraping Job", "Yesterday, 6:45 PM", "+0.008 SOL", "Completed", true),
+            TransactionItem("Secure Tunnel Relay", "Yesterday, 2:30 PM", "+0.003 SOL", "Completed", true),
+            TransactionItem("Withdrawal to Phantom", "Oct 24, 4:15 PM", "-15.00 SOL", "0.001 SOL fee", false),
+            TransactionItem("Relay Node Bonus", "Oct 23, 9:00 AM", "+0.08 SOL", "Completed", true),
+            TransactionItem("Bandwidth Share", "Oct 22, 3:10 PM", "+0.006 SOL", "Completed", true)
         )
         AlertDialog(
             onDismissRequest = { showViewAllDialog = false },
@@ -348,7 +353,18 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
         )
     }
 
+    // ===== PULL TO REFRESH =====
+    val pullRefreshState = rememberPullToRefreshState()
+    if (pullRefreshState.isRefreshing) {
+        LaunchedEffect(true) {
+            viewModel.refreshBalance()
+            delay(1500)
+            pullRefreshState.endRefresh()
+        }
+    }
+
     // ===== MAIN SCREEN =====
+    Box(modifier = Modifier.fillMaxSize().nestedScroll(pullRefreshState.nestedScrollConnection)) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(BackgroundDark),
         contentPadding = PaddingValues(bottom = 100.dp)
@@ -386,17 +402,17 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(buildAnnotatedString {
                                 withStyle(SpanStyle(fontSize = 48.sp, fontWeight = FontWeight.Bold, color = Primary)) {
-                                    append("$${String.format("%.2f", walletState.balanceUsdc)} ")
+                                    append("${liveSolBalance?.let { "%.4f".format(it) } ?: "%.4f".format(walletState.balanceSol)} ")
                                 }
-                                withStyle(SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Medium, color = SlateGray400)) { append("USDC") }
+                                withStyle(SpanStyle(fontSize = 24.sp, fontWeight = FontWeight.Medium, color = SlateGray400)) { append("SOL") }
                             })
                             Spacer(modifier = Modifier.height(8.dp))
-                            Surface(shape = RoundedCornerShape(50), color = Color.Black.copy(alpha = 0.2f),
+                                Surface(shape = RoundedCornerShape(50), color = Color.Black.copy(alpha = 0.2f),
                                 border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f))) {
                                 Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Icon(Icons.Default.CurrencyExchange, contentDescription = null, tint = SlateGray400, modifier = Modifier.size(12.dp))
-                                    Text("${liveSolBalance?.let { "%.4f".format(it) } ?: walletState.balanceSol} SOL",
+                                    Text("Solana Devnet",
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color(0xFFCBD5E1), fontWeight = FontWeight.Medium)
                                 }
@@ -505,7 +521,7 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
         if (filteredTransactions != null && filteredTransactions.isNotEmpty()) {
             items(filteredTransactions) { log ->
                 val isIncoming = log.usdcEarned > 0
-                val amountStr = if (isIncoming) "+${"%.4f".format(log.usdcEarned)} USDC" else "-${"%.4f".format(-log.usdcEarned)} USDC"
+                val amountStr = if (isIncoming) "+${"%.4f".format(log.usdcEarned)} SOL" else "-${"%.4f".format(-log.usdcEarned)} SOL"
                 val timeStr = java.text.SimpleDateFormat("MMM dd, h:mm a", java.util.Locale.getDefault())
                     .format(java.util.Date(log.timestamp))
                 TransactionListItem(TransactionItem(
@@ -515,23 +531,26 @@ fun WalletScreen(viewModel: WalletViewModel = viewModel()) {
         } else {
             val demoItems = when (selectedFilter) {
                 "Scraping" -> listOf(
-                    TransactionItem("Data Scraping Job", "Yesterday, 6:45 PM", "+0.008 USDC", "Completed", true),
-                    TransactionItem("Search Indexing Relay", "Oct 22, 1:20 PM", "+0.004 USDC", "Completed", true)
+                    TransactionItem("Data Scraping Job", "Yesterday, 6:45 PM", "+0.008 SOL", "Completed", true),
+                    TransactionItem("Search Indexing Relay", "Oct 22, 1:20 PM", "+0.004 SOL", "Completed", true)
                 )
                 "AI Inference" -> listOf(
-                    TransactionItem("AI Inference Relay", "Today, 9:15 AM", "+0.012 USDC", "Completed", true),
-                    TransactionItem("ML Pipeline Share", "Oct 23, 11:00 AM", "+0.009 USDC", "Completed", true)
+                    TransactionItem("AI Inference Relay", "Today, 9:15 AM", "+0.012 SOL", "Completed", true),
+                    TransactionItem("ML Pipeline Share", "Oct 23, 11:00 AM", "+0.009 SOL", "Completed", true)
                 )
                 else -> listOf(
-                    TransactionItem("Bandwidth Share", "Today, 10:42 AM", "+0.005 USDC", "Completed", true),
-                    TransactionItem("Node Incentive Reward", "Yesterday, 11:20 PM", "+0.12 USDC", "Completed", true),
-                    TransactionItem("Withdrawal to Phantom", "Oct 24, 4:15 PM", "-15.00 USDC", "0.001 SOL fee", false),
-                    TransactionItem("Relay Node Bonus", "Oct 23, 9:00 AM", "+0.08 USDC", "Completed", true)
+                    TransactionItem("Bandwidth Share", "Today, 10:42 AM", "+0.005 SOL", "Completed", true),
+                    TransactionItem("Node Incentive Reward", "Yesterday, 11:20 PM", "+0.12 SOL", "Completed", true),
+                    TransactionItem("Withdrawal to Phantom", "Oct 24, 4:15 PM", "-15.00 SOL", "0.001 SOL fee", false),
+                    TransactionItem("Relay Node Bonus", "Oct 23, 9:00 AM", "+0.08 SOL", "Completed", true)
                 )
             }
             items(demoItems) { tx -> TransactionListItem(tx) }
         }
     }
+    PullToRefreshContainer(state = pullRefreshState, modifier = Modifier.align(Alignment.TopCenter),
+        containerColor = SurfaceDark, contentColor = Primary)
+    } // Box
 }
 
 data class TransactionItem(val title: String, val timestamp: String, val amount: String, val status: String, val isIncoming: Boolean)

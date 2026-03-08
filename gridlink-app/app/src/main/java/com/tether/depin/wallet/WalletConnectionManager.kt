@@ -68,8 +68,7 @@ object WalletConnectionManager {
         val isConnected: Boolean = false,
         val publicKey: String = "",
         val privateKeyBase58: String = "",
-        val balanceUsdc: Double = 12.50,
-        val balanceSol: Double = 0.14,
+        val balanceSol: Double = 0.0,
         val label: String = "GridLink Embedded Wallet",
         val cluster: String = SOLANA_CLUSTER,
         val rpcUrl: String = SOLANA_RPC_URL
@@ -77,14 +76,32 @@ object WalletConnectionManager {
 
     fun initialize(context: Context) {
         if (initialized && encryptedPrefs != null) return
-        val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
-        encryptedPrefs = EncryptedSharedPreferences.create(
-            "gridlink_wallet_secure",
-            masterKeyAlias,
-            context,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        try {
+            val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+            encryptedPrefs = EncryptedSharedPreferences.create(
+                "gridlink_wallet_secure",
+                masterKeyAlias,
+                context,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (e: Exception) {
+            // Keystore corrupted (AEADBadTagException) — clear and retry
+            android.util.Log.e("WalletMgr", "EncryptedPrefs corrupted, resetting: ${e.message}")
+            context.getSharedPreferences("gridlink_wallet_secure", Context.MODE_PRIVATE).edit().clear().apply()
+            try {
+                val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+                encryptedPrefs = EncryptedSharedPreferences.create(
+                    "gridlink_wallet_secure",
+                    masterKeyAlias,
+                    context,
+                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                )
+            } catch (e2: Exception) {
+                android.util.Log.e("WalletMgr", "EncryptedPrefs retry failed: ${e2.message}")
+            }
+        }
         initialized = true
         loadWalletOnStartup()
     }
@@ -111,7 +128,6 @@ object WalletConnectionManager {
             isConnected = true,
             publicKey = publicBase58,
             privateKeyBase58 = secretBase58,
-            balanceUsdc = 0.0,
             balanceSol = 0.0
         )
 
@@ -142,8 +158,7 @@ object WalletConnectionManager {
                 isConnected = true,
                 publicKey = publicBase58,
                 privateKeyBase58 = privateKeyBase58.trim(),
-                balanceUsdc = 12.50,
-                balanceSol = 0.14
+                balanceSol = 0.0
             )
 
             Result.success(publicBase58)
@@ -166,8 +181,7 @@ object WalletConnectionManager {
                 isConnected = true,
                 publicKey = storedPubKey,
                 privateKeyBase58 = storedKey,
-                balanceUsdc = 12.50,
-                balanceSol = 0.14
+                balanceSol = 0.0
             )
         }
     }
@@ -182,10 +196,69 @@ object WalletConnectionManager {
         _newlyCreatedKey.value = null
     }
 
-    suspend fun signTransaction(amountUsdc: Double, recipientAddress: String): Result<String> {
+    fun updateBalance(solBalance: Double) {
+        _walletState.value = _walletState.value.copy(balanceSol = solBalance)
+    }
+
+    /**
+     * Builds, signs, and submits a real SOL transfer transaction on Solana Devnet.
+     *
+     * @param amountSol        Amount of SOL to send
+     * @param recipientBase58  Base58-encoded recipient public key
+     * @return Real on-chain transaction signature
+     */
+    suspend fun signAndSendSolTransfer(amountSol: Double, recipientBase58: String): Result<String> {
         return try {
-            val mockSignature = "5Tz${System.currentTimeMillis()}...devnet"
-            Result.success(mockSignature)
+            val state = _walletState.value
+            if (!state.isConnected || state.privateKeyBase58.isBlank()) {
+                return Result.failure(Exception("No wallet connected"))
+            }
+
+            // Decode stored private key — first 32 bytes = Ed25519 seed
+            val fullKeyBytes = decodeBase58(state.privateKeyBase58)
+            val seed = fullKeyBytes.copyOfRange(0, 32)
+            val senderPubkey = if (fullKeyBytes.size == 64) {
+                fullKeyBytes.copyOfRange(32, 64)
+            } else {
+                Ed25519PrivateKeyParameters(seed, 0).generatePublicKey().encoded
+            }
+
+            // Decode recipient public key
+            val recipientPubkey = decodeBase58(recipientBase58)
+            if (recipientPubkey.size != 32) {
+                return Result.failure(Exception("Invalid recipient address"))
+            }
+
+            // Fetch recent blockhash from devnet RPC
+            val blockhashResult = SolanaRpcClient.getRecentBlockhash()
+            if (blockhashResult.isFailure) {
+                return Result.failure(
+                    blockhashResult.exceptionOrNull() ?: Exception("Failed to fetch blockhash")
+                )
+            }
+            val blockhashBytes = decodeBase58(blockhashResult.getOrThrow())
+
+            // Build the transaction message
+            val lamports = (amountSol * 1_000_000_000).toLong()
+            val messageBytes = SolanaTransactionBuilder.buildSolTransferMessage(
+                senderPubkey = senderPubkey,
+                recipientPubkey = recipientPubkey,
+                lamports = lamports,
+                recentBlockhash = blockhashBytes
+            )
+
+            // Sign and serialize to base64
+            val signedTxBase64 = SolanaTransactionBuilder.signAndSerialize(messageBytes, seed)
+
+            // Submit to Solana devnet
+            val sendResult = SolanaRpcClient.sendTransaction(signedTxBase64)
+            if (sendResult.isFailure) {
+                return Result.failure(
+                    sendResult.exceptionOrNull() ?: Exception("Transaction submission failed")
+                )
+            }
+
+            Result.success(sendResult.getOrThrow())
         } catch (e: Exception) {
             Result.failure(e)
         }

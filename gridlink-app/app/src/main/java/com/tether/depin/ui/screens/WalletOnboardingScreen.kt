@@ -152,7 +152,7 @@ fun WalletOnboardingScreen(
                             Text("⚠️ THIS IS THE ONLY TIME THIS WILL BE SHOWN",
                                 style = MaterialTheme.typography.labelMedium, color = Red500, fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text("If you lose this key, your USDC is gone forever. GridLink does not store this on any server.",
+                            Text("If you lose this key, your SOL is gone forever. GridLink does not store this on any server.",
                                 style = MaterialTheme.typography.bodySmall, color = SlateGray400, lineHeight = 18.sp)
                         }
                     }

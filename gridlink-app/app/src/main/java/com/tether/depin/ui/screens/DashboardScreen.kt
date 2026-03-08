@@ -52,14 +52,14 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
     // View All Dialog
     if (showViewAllDialog) {
         val allActivities = listOf(
-            ActivityItem("Encrypted Packet Routed", "2 mins ago • 45 MB", "+0.02 USDC", Icons.Outlined.EnhancedEncryption),
+            ActivityItem("Encrypted Packet Routed", "2 mins ago • 45 MB", "+0.02 SOL", Icons.Outlined.EnhancedEncryption),
             ActivityItem("Connection Verified", "Local grid node", "Success", Icons.Outlined.VerifiedUser),
-            ActivityItem("Traffic Relay", "15 mins ago • 120 MB", "+0.05 USDC", Icons.Outlined.SwapHoriz),
-            ActivityItem("AI Inference Relay", "30 mins ago • 80 MB", "+0.03 USDC", Icons.Outlined.Psychology),
-            ActivityItem("Data Scraping Job", "1 hour ago • 200 MB", "+0.08 USDC", Icons.Outlined.Storage),
-            ActivityItem("Bandwidth Share", "2 hours ago • 60 MB", "+0.02 USDC", Icons.Outlined.SwapHoriz),
-            ActivityItem("Secure Tunnel Relay", "3 hours ago • 150 MB", "+0.06 USDC", Icons.Outlined.Security),
-            ActivityItem("Node Incentive Reward", "Yesterday • Bonus", "+0.12 USDC", Icons.Outlined.CardGiftcard)
+            ActivityItem("Traffic Relay", "15 mins ago • 120 MB", "+0.05 SOL", Icons.Outlined.SwapHoriz),
+            ActivityItem("AI Inference Relay", "30 mins ago • 80 MB", "+0.03 SOL", Icons.Outlined.Psychology),
+            ActivityItem("Data Scraping Job", "1 hour ago • 200 MB", "+0.08 SOL", Icons.Outlined.Storage),
+            ActivityItem("Bandwidth Share", "2 hours ago • 60 MB", "+0.02 SOL", Icons.Outlined.SwapHoriz),
+            ActivityItem("Secure Tunnel Relay", "3 hours ago • 150 MB", "+0.06 SOL", Icons.Outlined.Security),
+            ActivityItem("Node Incentive Reward", "Yesterday • Bonus", "+0.12 SOL", Icons.Outlined.CardGiftcard)
         )
         AlertDialog(
             onDismissRequest = { showViewAllDialog = false },
@@ -264,7 +264,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
                                     append("$${String.format("%.2f", displayEarned)} ")
                                 }
                                 withStyle(SpanStyle(fontSize = 14.sp, color = Primary)) {
-                                    append("USDC")
+                                    append("SOL")
                                 }
                             }
                         )
@@ -380,7 +380,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
                     ActivityItem(
                         title = "Traffic Relay",
                         subtitle = "$timeAgo • ${"%.0f".format(log.mbTransferred)} MB → ${log.destinationNode}",
-                        value = "+${"%.4f".format(log.usdcEarned)} USDC",
+                        value = "+${"%.4f".format(log.usdcEarned)} SOL",
                         icon = Icons.Outlined.SwapHoriz
                     )
                 )
@@ -388,9 +388,9 @@ fun DashboardScreen(viewModel: DashboardViewModel = viewModel()) {
         } else {
             // Fallback demo items when DB is empty
             val demoActivities = listOf(
-                ActivityItem("Encrypted Packet Routed", "2 mins ago • 45 MB", "+0.02 USDC", Icons.Outlined.EnhancedEncryption),
+                ActivityItem("Encrypted Packet Routed", "2 mins ago • 45 MB", "+0.02 SOL", Icons.Outlined.EnhancedEncryption),
                 ActivityItem("Connection Verified", "Local grid node", "Success", Icons.Outlined.VerifiedUser),
-                ActivityItem("Traffic Relay", "15 mins ago • 120 MB", "+0.05 USDC", Icons.Outlined.SwapHoriz)
+                ActivityItem("Traffic Relay", "15 mins ago • 120 MB", "+0.05 SOL", Icons.Outlined.SwapHoriz)
             )
             items(demoActivities) { activity ->
                 ActivityListItem(activity)

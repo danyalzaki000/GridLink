@@ -2,7 +2,7 @@
 
 **Share your bandwidth. Earn USDC. Run a real DePIN node from your pocket.**
 
-GridLink is a decentralized physical infrastructure network (DePIN) that turns Android devices into bandwidth-sharing nodes. Earn micropayments for every megabyte you route, settled on-chain via Solana Devnet.
+GridLink is a decentralized physical infrastructure network (DePIN) that turns Android devices into bandwidth-sharing nodes. Earn micropayments for every megabyte you route, settled on-chain via Solana Testnet.
 
 ---
 
@@ -81,10 +81,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 |-----------|---------|
 | **Keypair** | Ed25519 via BouncyCastle, stored in `EncryptedSharedPreferences` |
 | **Encoding** | Native Base58 encode/decode (no external lib) |
-| **RPC Client** | OkHttp direct JSON-RPC to `api.devnet.solana.com` |
-| **Airdrop** | 1 SOL Devnet faucet via `requestAirdrop` RPC |
+| **RPC Client** | OkHttp direct JSON-RPC to `api.testnet.solana.com` |
+| **Airdrop** | 1 SOL Testnet faucet via `requestAirdrop` RPC |
 | **Balance** | Live on-chain balance via `getBalance` RPC |
-| **Settlement** | Withdrawal flow with blockhash fetch → Explorer link |
+| **Settlement** | Real SOL transfer: binary tx serialization → Ed25519 sign → `sendTransaction` RPC → Explorer link |
 | **Key Backup** | Persistent modal dialog — user must acknowledge before proceeding |
 
 ---
@@ -118,8 +118,8 @@ monolith/
         │   └── TetherNodeService.kt     # Foreground service
         ├── wallet/
         │   ├── WalletConnectionManager.kt  # Singleton Ed25519 keystore
-        │   ├── SolanaRpcClient.kt          # Native Devnet JSON-RPC
-        │   └── SolanaTransactionBuilder.kt # TX construction
+        │   ├── SolanaRpcClient.kt          # Native Testnet JSON-RPC
+        │   └── SolanaTransactionBuilder.kt # Real binary TX serialization + Ed25519 signing
         ├── ui/
         │   ├── components/
         │   │   └── BottomNavBar.kt
@@ -154,7 +154,7 @@ monolith/
 | **Database** | Room 2.6 (SQLite) |
 | **Networking** | Retrofit 2.9, OkHttp 4.12, Moshi |
 | **Crypto** | BouncyCastle Ed25519, EncryptedSharedPreferences |
-| **Blockchain** | Solana Devnet JSON-RPC, Base58, SPL Token |
+| **Blockchain** | Solana Testnet JSON-RPC, Base58, Ed25519 on-chain signing |
 | **Backend** | FastAPI + Uvicorn |
 | **QR Codes** | ZXing 3.5 |
 | **Permissions** | Accompanist 0.34 |
